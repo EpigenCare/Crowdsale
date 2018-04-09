@@ -164,14 +164,14 @@ contract StandardToken is ERC20, BasicToken {
    * From MonolithDAO Token.sol
    */
   function increaseApproval (address _spender, uint _addedValue)
-  returns (bool success) {
+    returns (bool success) {
     allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
     Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
     return true;
   }
 
   function decreaseApproval (address _spender, uint _subtractedValue)
-  returns (bool success) {
+    returns (bool success) {
     uint oldValue = allowed[msg.sender][_spender];
     if (_subtractedValue > oldValue) {
       allowed[msg.sender][_spender] = 0;
@@ -243,7 +243,7 @@ contract EpigenCareToken is Ownable, StandardToken {
 
   function EpigenCareToken(address _owner, uint _openTransfers) {
     owner = _owner;
-    totalSupply = 100000000 ether;
+    totalSupply = 60000000 ether;
     balances[owner] = totalSupply;
     openTransfers = _openTransfers;
     sendWhitelist[owner] = true;
