@@ -208,14 +208,14 @@ contract StandardToken is ERC20, BasicToken {
    * From MonolithDAO Token.sol
    */
   function increaseApproval (address _spender, uint _addedValue)
-  returns (bool success) {
+    returns (bool success) {
     allowed[msg.sender][_spender] = allowed[msg.sender][_spender].add(_addedValue);
     Approval(msg.sender, _spender, allowed[msg.sender][_spender]);
     return true;
   }
 
   function decreaseApproval (address _spender, uint _subtractedValue)
-  returns (bool success) {
+    returns (bool success) {
     uint oldValue = allowed[msg.sender][_spender];
     if (_subtractedValue > oldValue) {
       allowed[msg.sender][_spender] = 0;
@@ -252,8 +252,9 @@ contract EpigenCareCrowdsale is Ownable {
 
   event TokenPurchaseRequest(address indexed purchaser, address indexed beneficiary, uint256 value);
 
-  function EpigenCareCrowdsale(uint256 _startTime, uint256 _endTime, address _wallet, address _tokenPool, address _token) Ownable() {
+  function EpigenCareCrowdsale(uint256 _startTime, uint256 _endTime, uint256 _rate, address _wallet, address _tokenPool, address _token) Ownable() {
     require(_endTime >= _startTime);
+    require(_rate > 0);
     require(_wallet != 0x0);
     require(_tokenPool != 0x0);
 
@@ -264,7 +265,7 @@ contract EpigenCareCrowdsale is Ownable {
     tokenPool = _tokenPool;
 
     verifiers[msg.sender] = true;
-    rate = 2500;
+    rate = _rate;
     minimumInvestment = 0.5 ether;
   }
 
