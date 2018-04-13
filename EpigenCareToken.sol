@@ -1,4 +1,4 @@
-pragma solidity ^0.4.17;
+pragma solidity ^0.4.21;
 
 // File: installed_contracts/zeppelin/contracts/math/SafeMath.sol
 
@@ -234,63 +234,46 @@ contract EpigenCareToken is Ownable, StandardToken {
 
   string public name = "EPIC Token";
   string public symbol = "EPIC";
-  uint8 public constant decimals = 18;
+  uint public constant decimals = 18;
+  uint constant DECIMALS_MULTIPLIER = 10 ** decimals;
   mapping (address => bool) sendWhitelist;
   mapping (address => bool) receiveWhitelist;
   mapping (address => bool) usedUnrestrictedTransfer;
-  uint public openTransfers;
+  uint public transfersOpenTime;
   string public restrictions = "THE DIGITAL TOKENS REPRESENTED BY THIS BLOCKCHAIN LEDGER RECORD HAVE BEEN ACQUIRED FOR INVESTMENT UNDER CERTAIN SECURITIES EXEMPTIONS AND HAVE NOT BEEN REGISTERED UNDER THE SECURITIES ACT OF 1933, AS AMENDED. UNTIL THE EXPIRATION OF THIS RESTRICTIVE LEGEND, SUCH TOKENS MAY NOT BE SOLD OR TRANSFERRED TO ANOTHER PARTY IN THE ABSENCE OF SUCH REGISTRATION OR AN EXEMPTION THEREFROM UNDER THE ACT AND ANY APPLICABLE STATE SECURITIES LAWS. ANY PARTIES, INCLUDING EXCHANGES AND THE ORIGINAL ACQUIRERS OF THESE TOKENS, MAY BE HELD LIABLE FOR ANY UNAUTHORIZED TRANSFERS OR SALES OF THESE TOKENS DURING THE RESTRICTIVE PERIOD, AND SHALL EXCLUDE THE COMPANY OF ANY LIABILITY IN CONNECTION WITH SUCH UNAUTHORIZED ACTIONS. EXTRAORDINARY NECESSITY TO LEGALLY TRANSFER THE PURCHASE OF THESE TOKENS MAY BE OBTAINED BY WRITTEN REQUEST MADE BY THE HOLDER OF THESE TOKENS TO THE COMPANY BUT WITHOUT GUARANTEE OF APPROVAL.";
 
-  function EpigenCareToken(address _owner, uint _openTransfers) {
+  function EpigenCareToken(address _owner, uint _transfersOpenTime) {
     owner = _owner;
-    totalSupply = 60000000 ether;
+    totalSupply = 60000000 * DECIMALS_MULTIPLIER;
     balances[owner] = totalSupply;
-    openTransfers = _openTransfers;
+    transfersOpenTime = _transfersOpenTime;
     sendWhitelist[owner] = true;
   }
 
-  function transfer(address _to, uint256 _value) public returns (bool) {
-    require(_to != address(0));
-    require(canTransfer(msg.sender, _to));
-
-    // SafeMath.sub will throw if there is not enough balance.
-    balances[msg.sender] = balances[msg.sender].sub(_value);
-    balances[_to] = balances[_to].add(_value);
-    Transfer(msg.sender, _to, _value);
-    return true;
+  function transfer(address _to, uint256 _value) public canTransfer(msg.sender, _to) returns (bool) {
+    return super.transfer(_to, _value);
   }
 
-  function transferFrom(address _from, address _to, uint256 _value) public returns (bool) {
-    require(_to != address(0));
-    require(canTransfer(_from, _to));
-
-    uint256 _allowance = allowed[_from][msg.sender];
-
-    // Check is not needed because sub(_allowance, _value) will already throw if this condition is not met
-    // require (_value <= _allowance);
-
-    balances[_from] = balances[_from].sub(_value);
-    balances[_to] = balances[_to].add(_value);
-    allowed[_from][msg.sender] = _allowance.sub(_value);
-    Transfer(_from, _to, _value);
-    return true;
+  function transferFrom(address _from, address _to, uint256 _value) public canTransfer(_from, _to) returns (bool) {
+    return super.transferFrom(_from, _to, _value);
   }
 
-  function canTransfer(address sender, address receiver) internal returns (bool) {
-    bool freelyTransfer = (sendWhitelist[sender] || receiveWhitelist[receiver] || now > openTransfers);
+  modifier canTransfer(address sender, address receiver) {
+    bool freelyTransfer = (sendWhitelist[sender] || receiveWhitelist[receiver] || now > transfersOpenTime);
     if(!freelyTransfer && !usedUnrestrictedTransfer[sender]) {
       usedUnrestrictedTransfer[sender] = true;
-      return true;
+    } else {
+      require(freelyTransfer);
     }
-    return freelyTransfer;
+    _;
   }
 
   function setRestrictions(string _restrictions) onlyOwner {
     restrictions = _restrictions;
   }
 
-  function updateOpenTransfers(uint timestamp) onlyOwner {
-    openTransfers = timestamp;
+  function updateTransfersOpenTime(uint timestamp) onlyOwner {
+    transfersOpenTime = timestamp;
   }
 
   function updateSendWhitelist(address[] addresses, bool setTo) onlyOwner {

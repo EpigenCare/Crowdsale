@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.21;
 
 // File: zeppelin/contracts/math/SafeMath.sol
 
@@ -280,19 +280,17 @@ contract EpigenCareCrowdsale is Ownable {
 
     uint256 weiAmount = msg.value;
 
-    Transaction transaction = transactions[beneficiary];
-    transaction.weiAmount = transaction.weiAmount.add(weiAmount);
-    weiPending = weiPending.add(weiAmount);
-
     if(approvedAddresses[beneficiary]) {
-      weiRaised = weiRaised.add(transaction.weiAmount);
-      weiPending = weiPending.sub(transaction.weiAmount);
-      uint256 tokens = transaction.weiAmount.mul(rate);
+      weiRaised = weiRaised.add(weiAmount);
+      uint256 tokens = weiAmount.mul(rate);
 
       token.transferFrom(tokenPool, beneficiary, tokens);
-      wallet.transfer(transaction.weiAmount);
-      transaction.weiAmount = 0;
+      wallet.transfer(weiAmount);
     } else {
+      Transaction transaction = transactions[beneficiary];
+      transaction.weiAmount = transaction.weiAmount.add(weiAmount);
+
+      weiPending = weiPending.add(weiAmount);
       TokenPurchaseRequest(msg.sender, beneficiary, weiAmount);
     }
   }
