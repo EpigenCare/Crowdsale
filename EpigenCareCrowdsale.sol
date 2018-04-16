@@ -242,13 +242,14 @@ contract EpigenCareCrowdsale is Ownable {
   uint256 public rate;
   uint256 public weiRaised;
   uint256 public weiPending;
+  uint256 public tokensPending;
   uint256 public minimumInvestment;
 
   mapping (address => Transaction) transactions;
   mapping (address => bool) approvedAddresses;
   mapping (address => bool) verifiers;
 
-  struct Transaction { uint weiAmount; }
+  struct Transaction { uint weiAmount; uint tokenAmount; }
 
   event TokenPurchaseRequest(address indexed purchaser, address indexed beneficiary, uint256 value);
 
@@ -279,18 +280,20 @@ contract EpigenCareCrowdsale is Ownable {
     require(msg.value >= minimumInvestment);
 
     uint256 weiAmount = msg.value;
+    uint256 tokens = weiAmount.mul(rate);
 
     if(approvedAddresses[beneficiary]) {
       weiRaised = weiRaised.add(weiAmount);
-      uint256 tokens = weiAmount.mul(rate);
 
       token.transferFrom(tokenPool, beneficiary, tokens);
       wallet.transfer(weiAmount);
     } else {
       Transaction transaction = transactions[beneficiary];
       transaction.weiAmount = transaction.weiAmount.add(weiAmount);
+      transaction.tokenAmount = transaction.tokenAmount.add(tokens);
 
       weiPending = weiPending.add(weiAmount);
+      tokensPending = tokensPending.add(tokens);
       TokenPurchaseRequest(msg.sender, beneficiary, weiAmount);
     }
   }
@@ -300,12 +303,13 @@ contract EpigenCareCrowdsale is Ownable {
 
     weiRaised = weiRaised.add(transaction.weiAmount);
     weiPending = weiPending.sub(transaction.weiAmount);
-    uint256 tokens = transaction.weiAmount.mul(rate);
+    tokensPending = tokensPending.sub(transaction.tokenAmount);
     approvedAddresses[purchaser] = true;
 
-    token.transferFrom(tokenPool, purchaser, tokens);
+    token.transferFrom(tokenPool, purchaser, transaction.tokenAmount);
     wallet.transfer(transaction.weiAmount);
     transaction.weiAmount = 0;
+    transaction.tokenAmount = 0;
   }
 
   function pendingTransaction(address user) returns (uint value){
@@ -315,21 +319,23 @@ contract EpigenCareCrowdsale is Ownable {
   function revokeRequest() {
     Transaction transaction = transactions[msg.sender];
     weiPending = weiPending.sub(transaction.weiAmount);
+    tokensPending = tokensPending.sub(transaction.tokenAmount);
     msg.sender.transfer(transaction.weiAmount);
     transaction.weiAmount = 0;
+    transaction.tokenAmount = 0;
   }
 
   modifier sufficientApproval(uint value) {
-    uint totalEther = weiPending.add(value);
-    uint tokensPending = totalEther.mul(rate);
-    uint tokensNeeded = token.allowance(tokenPool, this);
-    require(tokensNeeded >= tokensPending);
+    uint tokensNeeded = tokensPending.add(value.mul(rate));
+    uint tokensAvailable = token.allowance(tokenPool, this);
+    require(tokensAvailable >= tokensNeeded);
     _;
   }
 
   function rejectRequest(address user, uint fee) onlyVerifiers(msg.sender) {
     Transaction transaction = transactions[user];
     weiPending = weiPending.sub(transaction.weiAmount);
+    tokensPending = tokensPending.sub(transaction.tokenAmount);
     if(fee > 0) {
       transaction.weiAmount = transaction.weiAmount.sub(fee);
       wallet.transfer(fee);
@@ -337,6 +343,7 @@ contract EpigenCareCrowdsale is Ownable {
 
     user.transfer(transaction.weiAmount);
     transaction.weiAmount = 0;
+    transaction.tokenAmount = 0;
   }
 
   function validPurchase() internal constant returns (bool) {

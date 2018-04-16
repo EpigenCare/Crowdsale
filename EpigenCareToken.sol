@@ -232,7 +232,7 @@ contract Ownable {
 
 contract EpigenCareToken is Ownable, StandardToken {
 
-  string public name = "EPIC Token";
+  string public name = "EpigenCare";
   string public symbol = "EPIC";
   uint public constant decimals = 18;
   uint constant DECIMALS_MULTIPLIER = 10 ** decimals;
